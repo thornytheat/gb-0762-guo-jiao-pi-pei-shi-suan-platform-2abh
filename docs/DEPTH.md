@@ -14,6 +14,7 @@
 | M5 领用与余量核算 | 核对库存、领用和缺口 | POST /api/stock | `app/modules/stock/balance.py` | `tests/test_stock.py` |
 | M6 批次留档复跑 | 留档并验证重复提交 | POST /api/batches | `app/modules/batches/storage.py` | `tests/test_batches.py` |
 | M7 试配证据签发 | 复核试配状态并下载 | GET /api/certificate/<id> | `app/modules/certificate/service.py` | `tests/test_certificate.py` |
+| M8 来料停用追溯 | 登记停用/解封、重判签发 | POST /api/holds · POST /api/issuance/<id> | `app/modules/holds/` | `tests/test_holds_*.py` |
 
 ## 陷阱登记
 
@@ -28,6 +29,9 @@
 | TRAP-14 | PJ-06 双化验冲突 | 后写覆盖 | 两个原件行均隔离 | `app/modules/assay/service.py` | `tests/test_assay.py::test_contradictory_assays_disable_both` |
 | TRAP-15 | PJ-02 克和千克混写 | 重复入库 | 规范成克后判同批 | `app/modules/assay/units.py` | `tests/test_assay.py::test_kg_is_normalized_before_duplicate_detection` |
 | TRAP-19 | PJ-02 与 PJ-04 均可配 | 随记录顺序 | 先批数再到期，再按批号 | `app/modules/blend/search.py` | `tests/test_blend.py::test_conflicting_valid_choices_resolve_by_expiry` |
+| TRAP-21 | 迟到的解封单 | 后登记覆盖当前停用 | 按发生时间回放，迟到单计入 stale 不生效 | `app/modules/holds/ledger.py` | `tests/test_holds_ledger.py::test_late_release_cannot_override_newer_hold` |
+| TRAP-22 | 旧领料单只剩供应商 | 供应商全停误伤无关试配或直接放行 | 批号可对上只判批号；查不清转 SUPPLIER_SUSPECT/UNTRACEABLE | `app/modules/holds/service.py` | `tests/test_holds_issuance.py::test_actual_issuance_rejudges_untraceable_supplier_line` |
+| TRAP-23 | 停用单重试提交 | 重复登记流水 | 单据号幂等，文件锁 + 原子追加 | `app/modules/holds/store.py` | `tests/test_holds_store.py::test_retry_does_not_duplicate_registration` |
 
 ## 对账规则
 

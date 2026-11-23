@@ -1,6 +1,36 @@
 <section class="panel workstation">
   <h3>{{ '试算批记录' if stage == 'batches' else '试配签发记录' }}</h3>
   {% if record %}<p role="status">{{ '已归档' if fresh else '已复用' }} {{ record.batch_id[:12] }}</p>{% endif %}
-  {% if pack %}<p>{{ '可试配' if pack.can_trial else '试配暂缓' }} · {{ pack.stock_lines }} 库存行 · {{ pack.isolation_lines }} 隔离行</p><p class="digest">{{ pack.integrity_sha256 }}</p><a class="download" href="/api/export/{{ pack.batch_id }}">下载配料证据</a>{% endif %}
+  {% if pack %}
+    <p>{{ '可试配' if pack.can_trial else '试配暂缓' }} · {{ pack.stock_lines }} 库存行 · {{ pack.isolation_lines }} 隔离行</p>
+    {% set verdict = pack.issuance %}
+    <p class="state {{ 'pass' if verdict.can_issue else 'fail' }}">当前签发状态：{{ verdict.status }}{% if verdict.blocked_count %} · 拦截 {{ verdict.blocked_count }} 行{% endif %}</p>
+    {% if not verdict.base_trial_feasible %}<p class="fault">留档试配本身不可行（配料或库存约束未过），不具备签发基础。</p>{% endif %}
+    <p class="digest">{{ pack.integrity_sha256 }}</p>
+    <a class="download" href="/api/export/{{ pack.batch_id }}">下载配料证据</a>
+  {% endif %}
   <div class="sheet"><table><thead><tr><th>试算批</th><th>建立时间 UTC</th><th>耗时 (ms)</th></tr></thead><tbody>{% for row in entries %}<tr><td><a href="/trial/certificate?batch={{ row.batch_id }}">{{ row.batch_id[:16] }}</a></td><td>{{ row.created_at }}</td><td class="num">{{ row.elapsed_ms }}</td></tr>{% else %}<tr><td colspan="3"><a href="/trial/batches">先留档一批试配。</a></td></tr>{% endfor %}</tbody></table></div>
 </section>
+{% if pack %}
+<section class="panel">
+  <h3>签发资格逐行追溯（按当前停用台账重判）</h3>
+  <div class="sheet"><table>
+    <thead><tr><th>来源</th><th>批号</th><th>供应商</th><th>领用 (g)</th><th>结论</th><th>原因</th></tr></thead>
+    <tbody>{% for line in pack.issuance.lines %}
+      <tr data-issued="{{ not line.held }}"><td>{{ line.source }}</td><td>{{ line.lot or '批号查不清' }}</td><td>{{ line.supplier or '—' }}</td>
+      <td class="num">{{ line.grams }}</td><td class="state {{ 'pass' if not line.held else 'fail' }}">{{ line.verdict }}</td><td>{{ line.reason }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  <p class="quantity">{{ pack.issuance.review.note }}</p>
+</section>
+<section class="panel">
+  <h3>当前生效停用单</h3>
+  <div class="sheet"><table>
+    <thead><tr><th>物料</th><th>批号</th><th>供应商</th><th>单据号</th><th>发生日期</th><th>原因</th></tr></thead>
+    <tbody>{% for row in pack.issuance.active_holds %}
+      <tr><td>{{ row.material }}</td><td>{{ row.scope.lots|join('、') or '—' }}</td><td>{{ row.scope.suppliers|join('、') or '—' }}</td>
+      <td>{{ row.order_id }}</td><td>{{ row.occurred_at }}</td><td>{{ row.reason }}</td></tr>
+    {% else %}<tr><td colspan="6">无生效停用单。</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}

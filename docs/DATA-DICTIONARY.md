@@ -9,3 +9,11 @@
 寻优用到期日、批号排序，以最少领用批为首要目标，同批数优先最大化较早批次的用量。超出 14 个可用整步批或 300,000 状态上限时报错。不可行时整单留待处理，库存保持原量。结算库存包含已采信但过期与不足整步的库存，冲突批计入隔离清单。
 
 同份化验文本和同参数计算同一 SHA-256 标识。运行保存源摘要、计划、候选提案、UTC 建立时间、耗时、规则和逐阶段证据。归档经同目录临时文件写入和原子发布，重复提交返回既有快照。证据摘要以排序键、UTF-8 和紧凑 JSON 复算。
+
+## 来料停用台账（M8）
+
+停用单与解封单字段为 `order_id,type,material,occurred_at,reason,scope`，`type` 取 `HOLD`/`RELEASE`，日期为 `YYYY-MM-DD`；`scope.lots` 与 `scope.suppliers` 至少给一项（解封可空）。台账以 JSONL 存于 `PECTIN_HOLD_ARCHIVE`（默认 `<归档目录>/qc/holds.jsonl`），`fcntl` 文件锁串行化写入，同 `order_id` 重试返回既有单据、不重复登记。
+
+回放按登记顺序进行，仅接受 `(occurred_at, seq)` 不早于已生效单据的新单；迟到的解封单不能盖过更新的停用单，被压下单据计入 `stale_overridden`。新试算（`/api/blend`、`/api/stock`、留档）只剔除批号与当前停用单精确命中的采信批，供应商级停用不影响能对上号的无关试配。
+
+签发资格由 `POST /api/issuance/<id>` 按当前台账对实际领用重判，结论码：`CLEAR`（可放行）、`HELD_LOT`（批号命中停用）、`SUPPLIER_SUSPECT`（批号查不清且供应商在停用范围）、`UNTRACEABLE`（批号与供应商都无法核对，转人工追溯）、`LOT_NOT_ACCEPTED`（批号不在采信清单）。只有 `CLEAR` 放行；留档原配料与库存余量原样保留在 `review` 中供复核，`can_trial` 留档结论不变，`can_issue` 为当前资格。签发页展示当前状态、逐行原因与生效停用单。

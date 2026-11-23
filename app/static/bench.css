@@ -32,6 +32,8 @@ tbody tr:nth-child(even) { background: #faf1e7; }
 tr[data-issued=True] td:first-child { border-left: 3px solid var(--accent); }
 .num { text-align: right; font-family: var(--font-num); }
 .checks { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px var(--pad); }
+.hold-form { padding: 0 var(--pad) var(--pad); }
+.hold-form button { margin-top: 10px; }
 .pass { color: var(--ok); } .fail,.fault { color: var(--bad); }
 .digest { overflow-wrap: anywhere; font-family: var(--font-num); }
 .download { display: inline-block; margin: 6px var(--pad); }

@@ -1,0 +1,40 @@
+<section class="panel workstation">
+  <div class="bench-head"><h3>来料停用台账</h3>
+    <span class="state {{ 'fail' if hold_view.active_holds else 'pass' }}">当前停用 {{ hold_view.active_holds|length }} 项</span></div>
+  {% if hold_error %}<p class="fault" role="alert">{{ hold_error }}。核对单据号、日期与停用范围后重提，重试不会重复登记。</p>{% endif %}
+  {% if hold_fresh %}<p role="status">单据已登记。</p>{% elif request.method == 'POST' %}<p role="status">单据号已存在，已复用既有登记。</p>{% endif %}
+  <form method="post" class="hold-form">
+    <div class="inputs">
+      <label>单据号<input name="order_id" required placeholder="QC-2026-001"></label>
+      <label>类型<select name="type"><option value="HOLD">停用 HOLD</option><option value="RELEASE">解封 RELEASE</option></select></label>
+      <label>物料<input name="material" value="果胶"></label>
+      <label>发生日期<input name="occurred_at" required placeholder="2026-11-23"></label>
+      <label class="wide">原因<input name="reason" required placeholder="质检按来料批号停用果胶"></label>
+      <label class="wide">停用批号（逗号分隔）<input name="lots" placeholder="PJ-02, PJ-03"></label>
+      <label class="wide">停用供应商（旧单只剩供应商时填）<input name="suppliers" placeholder="供应商甲"></label>
+    </div>
+    <button type="submit">登记单据</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h3>当前生效停用</h3>
+  <div class="sheet"><table>
+    <thead><tr><th>物料</th><th>批号范围</th><th>供应商范围</th><th>单据号</th><th>发生日期</th><th>原因</th><th>被压迟到单</th></tr></thead>
+    <tbody>{% for row in hold_view.active_holds %}
+      <tr><td>{{ row.material }}</td><td>{{ row.scope.lots|join('、') or '—' }}</td><td>{{ row.scope.suppliers|join('、') or '—' }}</td>
+      <td>{{ row.order_id }}</td><td>{{ row.occurred_at }}</td><td>{{ row.reason }}</td><td class="num">{{ row.stale_overridden }}</td></tr>
+    {% else %}<tr><td colspan="7">暂无生效停用单。</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+<section class="panel">
+  <h3>单据流水（按发生时间）</h3>
+  <div class="sheet"><table>
+    <thead><tr><th>单据号</th><th>类型</th><th>发生日期</th><th>批号</th><th>供应商</th><th>原因</th></tr></thead>
+    <tbody>{% for row in hold_view.orders %}
+      <tr data-issued="{{ row.type == 'HOLD' }}"><td>{{ row.order_id }}</td><td>{{ row.type }}</td><td>{{ row.occurred_at }}</td>
+      <td>{{ row.scope.lots|join('、') or '—' }}</td><td>{{ row.scope.suppliers|join('、') or '—' }}</td><td>{{ row.reason }}</td></tr>
+    {% else %}<tr><td colspan="6">尚未登记任何单据。</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
